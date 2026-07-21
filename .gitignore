@@ -1,6 +1,8 @@
 # Excluir arquivos de dados
 entrada/
 saida/
+
+# Base
 *.db
 
 # Byte-compiled / optimized / DLL files
