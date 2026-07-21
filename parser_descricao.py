@@ -75,5 +75,7 @@ def processar_descricao(texto_descricao, metodo_relatado, localidade):
     # Limpa a string da comarca extraída pelo Regex mantendo apenas o nome padrão
     if resultado.get("Comarca"):
         resultado["Comarca"] = extrair_comarca(resultado["Comarca"])
+    else:
+        resultado["Comarca"] = extrair_comarca(localidade)
         
     return resultado
