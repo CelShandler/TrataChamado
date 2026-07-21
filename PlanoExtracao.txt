@@ -1,0 +1,456 @@
+A solução pode ser dividida em módulos independentes, o que facilita manutenção, testes e futuras alterações (como adicionar novos campos ou novas regras de extração).
+
+Arquitetura Geral
+Arquivo Excel Aranda
+        │
+        ▼
+Leitura da Planilha
+        │
+        ▼
+Para cada linha
+        │
+        ├── Extrair informações da Descrição
+        │
+        ├── Verificar Estado
+        │
+        ├── Consultar banco SQLite
+        │
+        ├── Decidir destino
+        │
+        └── Adicionar na lista correspondente
+                    │
+                    ▼
+        Salvar:
+            - Chamados Fechados.xlsx
+            - Chamados Ativos.xlsx
+            - chamadosF.db
+Etapa 1 - Configuração
+
+Criaria um arquivo config.py contendo apenas informações de configuração.
+
+Exemplo:
+
+COMARCAS = [
+    "Rio Branco",
+    "Porto Acre",
+    "Porto Walter",
+    "Jordão",
+    "Santa Rosa",
+    "Marechal Thaumaturgo",
+    "Bujari",
+    "Sena Madureira",
+    "Manoel Urbano",
+    "Feijó",
+    "Tarauacá",
+    "Cruzeiro do Sul",
+    "Mâncio Lima",
+    "Rodrigues Alves",
+    "Senador Guiomard",
+    "Capixaba",
+    "Acrelândia",
+    "Plácido de Castro",
+    "Xapuri",
+    "Epitaciolândia",
+    "Brasiléia",
+    "Assis Brasil"
+]
+
+Também manteria as palavras-chave de extração nesse arquivo.
+
+Etapa 2 - Banco SQLite
+
+Criaria um banco chamado
+
+chamadosF.db
+
+Tabela
+
+CREATE TABLE chamados_fechados (
+    numero INTEGER PRIMARY KEY,
+    data_processamento DATETIME
+);
+
+Ele servirá apenas como índice.
+
+Nunca armazenaria o chamado inteiro.
+
+Somente
+
+2494906
+2290628
+8704565
+...
+
+Assim a consulta será extremamente rápida.
+
+Etapa 3 - Leitura da planilha
+
+Usaria
+
+pandas.read_excel()
+
+Resultado:
+
+DataFrame
+Etapa 4 - Normalização
+
+Antes de qualquer processamento faria:
+
+remover NaN
+converter para string
+remover espaços duplicados
+
+Exemplo
+
+Descricao = str(Descricao)
+Etapa 5 - Extração da Descrição
+
+Criaria uma função
+
+processar_descricao(texto)
+
+Ela retornará um dicionário.
+
+Exemplo
+
+{
+    "DescricaoNovo": "...",
+    "Categoria": "...",
+    "Login": "...",
+    "Nome": "...",
+    "Telefone": "...",
+    "Ramal": "...",
+    "Email": "...",
+    "Comarca": "...",
+    "Setor": "...",
+    "Patrimônio": "...",
+    "Local de Atuação": "...",
+    "Número de IP / ANYDESK": "...",
+    "CPF": "...",
+    "Data de nascimento": "..."
+}
+Como faria essa extração?
+
+Ao invés de dezenas de split() faria usando Expressões Regulares.
+
+As palavras são muito bem definidas.
+
+Exemplo
+
+Categoria:
+Login:
+Nome:
+Telefone:
+
+Então um único parser resolve tudo.
+
+Exemplo
+
+Categoria:\s*(.*?)Login:
+
+ou
+
+Login:\s*(.*?)Nome:
+
+etc.
+
+Isso evita erros.
+
+DescricaoNovo
+
+Ela será tudo antes do primeiro marcador encontrado.
+
+Exemplo
+
+Solicito...
+Categoria:
+
+Retorna
+
+Solicito...
+
+Mesmo que o primeiro marcador seja
+
+CPF:
+
+ou
+
+Nome:
+
+ou
+
+Telefone:
+
+A lógica continua funcionando.
+
+Etapa 6 - Extração da Comarca
+
+A Localidade normalmente vem assim
+
+Comarca de Cruzeiro do Sul - Fórum Cível
+
+ou
+
+Comarca de Rio Branco
+
+ou
+
+Comarca de Brasiléia
+
+A função seria
+
+extrair_comarca(localidade)
+
+Ela percorre a lista
+
+COMARCAS
+
+e retorna a primeira encontrada.
+
+Exemplo
+
+for comarca in COMARCAS:
+    if comarca.lower() in localidade.lower():
+        return comarca
+
+Caso nenhuma seja encontrada
+
+Rio Branco
+Etapa 7 - Método Relatado
+
+Primeira validação.
+
+Metodo Relatado == "E-Mail"
+
+Então
+
+NÃO PROCESSAR A DESCRIÇÃO
+
+Os novos campos ficam vazios.
+
+Etapa 8 - Adicionar colunas novas
+
+Após processar
+
+Adicionar no DataFrame
+
+DescricaoNovo
+
+Categoria
+
+Login
+
+Nome
+
+Telefone
+
+Ramal
+
+Email
+
+Comarca
+
+Setor
+
+Patrimônio
+
+Local de Atuação
+
+Número de IP / ANYDESK
+
+CPF
+
+Data de nascimento
+Etapa 9 - Primeira execução
+
+Verificar
+
+Existe chamadosF.db?
+
+Não.
+
+Criar banco.
+
+Depois percorrer todos os registros.
+
+Se Estado == Closed
+
+Processar.
+
+Adicionar em
+
+Planilha Fechados
+
+Adicionar no banco
+
+INSERT
+Se Estado != Closed
+
+Adicionar
+
+Planilha Chamados Ativos
+Etapa 10 - Próximas execuções
+
+Agora existe o banco.
+
+Para cada chamado fechado
+
+Consultar
+
+SELECT numero
+
+Encontrou?
+
+Sim
+
+↓
+
+Ignora.
+
+Não copia novamente.
+
+Não encontrou?
+
+↓
+
+Processa.
+
+↓
+
+Adiciona na planilha Fechados.
+
+↓
+
+Insere no banco.
+
+Etapa 11 - Chamados ativos
+
+Os ativos sempre serão recriados.
+
+Motivo:
+
+Um chamado pode mudar de grupo.
+
+Pode mudar de responsável.
+
+Pode mudar de prioridade.
+
+Pode mudar de descrição.
+
+Portanto sempre gerar uma planilha nova.
+
+Etapa 12 - Escrita dos arquivos
+
+Gerar
+
+Chamados_Fechados.xlsx
+
+e
+
+Chamados_Ativos.xlsx
+
+Com
+
+DataFrame.to_excel()
+Organização dos módulos
+Projeto/
+
+│
+
+├── main.py
+
+├── config.py
+
+├── parser_descricao.py
+
+├── sqlite_manager.py
+
+├── excel_manager.py
+
+├── utils.py
+
+│
+
+├── chamadosF.db
+
+│
+
+├── entrada/
+│      Aranda.xlsx
+
+│
+
+└── saida/
+       Chamados_Fechados.xlsx
+       Chamados_Ativos.xlsx
+Fluxo completo
+Início
+   │
+   ▼
+Abrir banco SQLite
+   │
+   ▼
+Existe banco?
+   │
+ ┌─┴─────────────┐
+ │               │
+Não             Sim
+ │               │
+Criar           Abrir
+ │               │
+ └──────┬────────┘
+        ▼
+Ler Excel Aranda
+        │
+        ▼
+Para cada linha
+        │
+        ▼
+Metodo Relatado = E-Mail?
+        │
+   ┌────┴─────┐
+   │          │
+ Sim         Não
+   │          │
+Não extrai    Extrair Descrição
+   │          │
+   └────┬─────┘
+        ▼
+Estado = Closed?
+        │
+   ┌────┴───────────┐
+   │                │
+ Não              Sim
+   │                │
+Ativos      Existe no banco?
+                  │
+           ┌──────┴──────┐
+           │             │
+          Sim           Não
+           │             │
+      Ignora       Salva Fechado
+                         │
+                         ▼
+                  Inserir no banco
+        │
+        ▼
+Salvar Chamados Ativos
+        │
+        ▼
+Salvar Chamados Fechados
+        │
+        ▼
+Fim
+Melhorias adicionais recomendadas
+
+Além do fluxo proposto, eu incluiria algumas melhorias para tornar a solução mais robusta:
+
+Logs de execução: registrar quantos chamados foram lidos, quantos foram processados, quantos já existiam no banco, quantos foram enviados para "Fechados" e "Ativos", além de eventuais erros de processamento.
+Configuração externa: manter caminhos dos arquivos, nome do banco, lista de comarcas e marcadores de extração em um arquivo de configuração (config.py ou .json), facilitando futuras alterações.
+Extração baseada em regex: utilizar expressões regulares para tornar a captura dos campos mais tolerante a pequenas variações de espaçamento ou ausência de alguns campos.
+Validação de campos: verificar se CPF, e-mail, datas e IPs possuem formato válido antes de gravá-los.
+Tratamento de exceções: impedir que um único registro com descrição malformada interrompa todo o processamento.
+Classe de processamento: encapsular a lógica em uma classe (por exemplo, ProcessadorAranda), facilitando testes e reutilização.
+Modo incremental: preservar a característica de que apenas chamados fechados inéditos são adicionados ao histórico, enquanto a planilha de chamados ativos é recriada integralmente a cada execução.
+
+Esse desenho torna o sistema modular, fácil de manter e preparado para futuras expansões, como a migração para GLPI ou a inclusão de novos campos na descrição dos chamados.
