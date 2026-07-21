@@ -1,3 +1,7 @@
+# Excluir arquivos de dados
+entrada/
+saida/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
