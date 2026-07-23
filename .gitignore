@@ -2,8 +2,11 @@
 entrada/
 saida/
 
+# Arquivos debug
+debug*.txt
+
 # Base
-*.db
+chamadosF.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
