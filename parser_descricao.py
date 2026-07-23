@@ -13,10 +13,9 @@ def extrair_comarca(localidade):
     return "Rio Branco"
 
 def gerar_regex_padrao():
-    # Exemplo: (Categoria:|Login:|Nome:|...)
-    # Para extrair tudo entre os marcadores
-    escaped_campos = [re.escape(c) for c in CAMPOS_EXTRAIR]
-    # Cria o padrão para buscar onde as labels começam
+    # Ordena por tamanho decrescente para garantir que labels compostas
+    # como 'Nome Completo' tenham prioridade sobre 'Nome'.
+    escaped_campos = [re.escape(c) for c in sorted(CAMPOS_EXTRAIR, key=len, reverse=True)]
     pattern_labels = r'(' + '|'.join(escaped_campos) + r')\s*:'
     return pattern_labels
 
@@ -32,7 +31,7 @@ def processar_descricao(texto_descricao, metodo_relatado, localidade):
     metodo_relatado = str(metodo_relatado)
     
     resultado = {campo: "" for campo in CAMPOS_EXTRAIR}
-    resultado["DescricaoNovo"] = texto_descricao
+    resultado["Descricao"] = texto_descricao
     resultado["Comarca"] = extrair_comarca(localidade)
     
     # Validação do método relatado
@@ -49,7 +48,7 @@ def processar_descricao(texto_descricao, metodo_relatado, localidade):
         
     # DescricaoNovo é o que vem antes do primeiro marcador
     primeiro_match = matches[0]
-    resultado["DescricaoNovo"] = texto_descricao[:primeiro_match.start()].strip()
+    resultado["Descricao"] = texto_descricao[:primeiro_match.start()].strip()
     
     # Processar cada campo encontrado
     for i in range(len(matches)):

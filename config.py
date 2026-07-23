@@ -42,13 +42,10 @@ CAMPOS_EXTRAIR = [
     "Login",
     "Nome",
     "Telefone",
-    "Ramal",
     "Email",
     "Comarca",
     "Setor",
     "Patrimônio",
     "Local de Atuação",
-    "Número de IP / ANYDESK",
-    "CPF",
-    "Data de nascimento"
+    "Número de IP / ANYDESK"
 ]

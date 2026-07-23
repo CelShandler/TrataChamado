@@ -20,9 +20,35 @@ def processar_df(df):
     fechados_para_adicionar = []
     ativos_para_adicionar = []
     
-    # Novos campos a adicionar
-    novos_campos = ["DescricaoNovo"] + CAMPOS_EXTRAIR
+    # Excluir colunas indesejadas
+    colunas_remover = ["Inquilino", "Cidade_Cliente", "Endereço_Cliente"]
+    df = df.drop(columns=[c for c in colunas_remover if c in df.columns], errors='ignore')
     
+    # Renomear e processar colunas
+    rename_dict = {}
+    for c in df.columns:
+        if str(c).lower() == "estado":
+            rename_dict[c] = "Status"
+        elif str(c).lower() == "descrição" or str(c).lower() == "descricao":
+            rename_dict[c] = "Descricao_Detalhada"
+    df = df.rename(columns=rename_dict)
+    
+    # Mapear Status
+    if "Status" in df.columns:
+        status_map = {
+            "Open": "Aberto",
+            "Resolved": "Resolvido",
+            "Suspended": "Suspenso",
+            "Transfer": "Transferido",
+            "Closed": "Fechado",
+            "open": "Aberto",
+            "resolved": "Resolvido",
+            "suspended": "Suspenso",
+            "transfer": "Transferido",
+            "closed": "Fechado"
+        }
+        df["Status"] = df["Status"].replace(status_map)
+        
     numeros_fechados = []
     
     total_lidos = len(df)
@@ -41,12 +67,12 @@ def processar_df(df):
             if not col_numero:
                 col_numero = cols[0]
                 
-            col_estado = 'Estado' if 'Estado' in cols else (cols[cols_lower.index('estado')] if 'estado' in cols_lower else None)
+            col_estado = 'Status' if 'Status' in cols else (cols[cols_lower.index('status')] if 'status' in cols_lower else None)
             col_metodo = 'Metodo Relatado' if 'Metodo Relatado' in cols else (cols[cols_lower.index('metodo relatado')] if 'metodo relatado' in cols_lower else 'Método Relatado')
             if col_metodo not in cols:
                 col_metodo = cols[cols_lower.index('método relatado')] if 'método relatado' in cols_lower else None
                 
-            col_descricao = 'Descricao' if 'Descricao' in cols else (cols[cols_lower.index('descrição')] if 'descrição' in cols_lower else None)
+            col_descricao = 'Descricao_Detalhada' if 'Descricao_Detalhada' in cols else (cols[cols_lower.index('descricao_detalhada')] if 'descricao_detalhada' in cols_lower else None)
             col_localidade = 'Localidade' if 'Localidade' in cols else (cols[cols_lower.index('localidade')] if 'localidade' in cols_lower else None)
             
             numero = row.get(col_numero)
